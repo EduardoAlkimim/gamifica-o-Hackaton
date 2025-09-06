@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Leaf, Award, CheckCircle, Star, Coins, ArrowRight, BookOpen, Store, Spade, QrCode, Tractor, DollarSign } from 'lucide-react';
-import { UserData, RankingPlayer, Tab, CollectibleItem } from '../types';
+import type { UserData, RankingPlayer, Tab, CollectibleItem } from '../types';
 import { MOCK_USER_DATA, MOCK_COLLECTIBLES, DAILY_REWARD_COINS } from '../data';
 
 // --- COMPONENTES AUXILIARES ---
@@ -236,7 +236,10 @@ const ScannerSection = ({ onScan }: ScannerSectionProps) => (
 // --- COMPONENTE PRINCIPAL DO DASHBOARD ---
 const Dashboard = () => {
     // Estados para dados locais/mockados que ainda usamos
-    const [userData, setUserData] = useState<UserData>(MOCK_USER_DATA);
+    const [userData, setUserData] = useState<UserData>({
+        ...MOCK_USER_DATA,
+        name: "Jogador"
+    });
     const [activeTab, setActiveTab] = useState<Tab>('fazenda');
     const [showConfetti, setShowConfetti] = useState(false);
     const [showDailyReward, setShowDailyReward] = useState(false);
@@ -246,7 +249,7 @@ const Dashboard = () => {
     const [profileData, setProfileData] = useState<any>(null);
     const [statusData, setStatusData] = useState<any>(null);
     const [missions, setMissions] = useState<any[]>([]);
-    const [ranking, setRanking] = useState<any[]>([]);
+    const [ranking, setRanking] = useState<RankingPlayer[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -357,72 +360,42 @@ const Dashboard = () => {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        // ... (resto da implementação do som)
+
+        if(type === 'complete') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        } else if (type === 'reward') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+        } else if (type === 'scan') {
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+        }
+        
         gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.5);
     };
     
-    const handleCompleteMission = async (missionId: string) => { 
+    const handleCompleteMission = (missionId: string) => { 
         const missionToComplete = missions.find(m => m.id === missionId);
         if (!missionToComplete || missionToComplete.completed) return;
 
-        const originalMissions = missions;
-        const originalStatusData = statusData;
-
-        const updatedMissions = missions.map(m => m.id === missionId ? { ...m, completed: true } : m);
+        const updatedMissions = missions.map(mission => 
+            mission.id === missionId ? { ...mission, completed: true } : mission
+        );
         setMissions(updatedMissions);
+
         setStatusData((prev: any) => ({
             ...prev,
             total_points: prev.total_points + missionToComplete.xp
         }));
+        
+        playSound('complete');
         setShowConfetti(true);
-
-        let actionId;
-        switch (missionToComplete.xp) {
-            case 25: actionId = "ClickEGanhe25xp"; break;
-            case 50: actionId = "ClickEGanhe"; break;
-            case 75: actionId = "ClickEGanhe75xp"; break;
-            case 100: actionId = "ClickEGanhe100xp"; break;
-            case 150: actionId = "ClickEGanhe150xp"; break;
-            default:
-                console.warn(`Nenhum actionId configurado para ${missionToComplete.xp} XP.`);
-                return;
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            const username = localStorage.getItem('username');
-
-            if (!token || !username) throw new Error("Dados de autenticação faltando.");
-            
-            const logBody = { actionId: actionId, userId: username };
-
-            const response = await fetch(`https://service2.funifier.com/v3/action/log`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(logBody)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error("Erro da API Funifier:", errorData);
-                throw new Error(`O servidor retornou um erro ${response.status}.`);
-            }
-            
-            console.log(`Log da ação "${actionId}" enviado com sucesso!`);
-
-        } catch (error) {
-            console.error("Falha ao registrar ação na API:", error);
-            alert("Ops! A API não autorizou esta ação (Erro 401). A mudança na tela será desfeita.");
-            
-            setMissions(originalMissions);
-            setStatusData(originalStatusData);
-            setShowConfetti(false);
-        }
+        setTimeout(() => setShowConfetti(false), 4000);
+        console.log(`Missão "${missionToComplete.text}" completada na interface.`);
     };
      
     const handleQrScan = (qrId: string) => { alert(`Lógica para QR Code ${qrId} não implementada.`); };

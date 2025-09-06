@@ -1,5 +1,5 @@
 // src/data.ts
-import type { UserData, Mission, RankingPlayer, CollectibleItem } from './types';
+import type { UserData, Mission, CollectibleItem } from './types';
 
 export const MOCK_USER_DATA: Omit<UserData, 'name'> = {
     xp: 75,
@@ -17,11 +17,6 @@ export const MOCK_MISSIONS: Mission[] = [
     { id: 4, text: "Completar o desafio diário", xp: 100, completed: false },
 ];
 
-export const MOCK_RANKING: RankingPlayer[] = [
-    { id: 1, name: "Maria", xp: 1250, avatar: "👩‍🌾" }, { id: 2, name: "João", xp: 1100, avatar: "🧑‍💻" },
-    { id: 3, name: "Ana", xp: 950, avatar: "👩‍🔬" }, { id: 4, name: "Aluno Hackathon", xp: 275, avatar: "🧑‍🚀" },
-    { id: 5, name: "Pedro", xp: 150, avatar: "🧑‍🎨" },
-];
 
 export const MOCK_COLLECTIBLES: CollectibleItem[] = [
     {id: 1, name: 'Semente Brilhante', emoji: '✨', description: 'Uma semente que pulsa com uma luz suave.', rarity: 'comum'},
