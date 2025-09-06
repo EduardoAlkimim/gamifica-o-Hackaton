@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 // src/types.ts
 export type UserData = {
     name: string;

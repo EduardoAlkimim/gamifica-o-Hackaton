@@ -4,7 +4,7 @@ import { Leaf, Award, CheckCircle, Star, Coins, ArrowRight, BookOpen, Store, Spa
 import type { UserData, RankingPlayer, Tab, CollectibleItem } from '../types';
 import { MOCK_USER_DATA, MOCK_COLLECTIBLES, DAILY_REWARD_COINS } from '../data';
 
-// --- COMPONENTES AUXILIARES ---
+// --- (Todos os seus componentes auxiliares como Plantation, DashboardCard, etc. vêm aqui) ---
 
 type PlantationProps = {
   level: UserData['plantLevel'];
@@ -360,7 +360,7 @@ const Dashboard = () => {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-
+        
         if(type === 'complete') {
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
@@ -378,24 +378,66 @@ const Dashboard = () => {
         oscillator.stop(audioContext.currentTime + 0.5);
     };
     
-    const handleCompleteMission = (missionId: string) => { 
+    const handleCompleteMission = async (missionId: string) => { 
         const missionToComplete = missions.find(m => m.id === missionId);
         if (!missionToComplete || missionToComplete.completed) return;
 
-        const updatedMissions = missions.map(mission => 
-            mission.id === missionId ? { ...mission, completed: true } : mission
-        );
-        setMissions(updatedMissions);
+        const originalMissions = missions;
+        const originalStatusData = statusData;
 
+        setMissions(missions.map(m => m.id === missionId ? { ...m, completed: true } : m));
         setStatusData((prev: any) => ({
             ...prev,
             total_points: prev.total_points + missionToComplete.xp
         }));
-        
-        playSound('complete');
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 4000);
-        console.log(`Missão "${missionToComplete.text}" completada na interface.`);
+
+        try {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            
+            let actionId;
+            switch (missionToComplete.xp) {
+                case 25: actionId = "ClickEGanhe25xp"; break;
+                case 50: actionId = "ClickEGanhe"; break;
+                case 75: actionId = "ClickEGanhe75xp"; break;
+                case 100: actionId = "ClickEGanhe100xp"; break;
+                case 150: actionId = "ClickEGanhe150xp"; break;
+                default:
+                    console.warn(`Nenhum actionId configurado para ${missionToComplete.xp} XP.`);
+                    return;
+            }
+
+            if (!token || !username) throw new Error("Dados de autenticação faltando.");
+            
+            const logBody = { actionId: actionId, userId: username };
+
+            const response = await fetch(`https://service2.funifier.com/v3/action/log`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(logBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Erro da API Funifier:", errorData);
+                throw new Error(`O servidor retornou um erro ${response.status}.`);
+            }
+            
+            console.log(`Log da ação "${actionId}" enviado com sucesso!`);
+
+        } catch (error) {
+            console.error("Falha ao registrar ação na API:", error);
+            alert("Ops! A API não autorizou esta ação. A mudança na tela será desfeita.");
+            
+            setMissions(originalMissions);
+            setStatusData(originalStatusData);
+            setShowConfetti(false);
+        }
     };
      
     const handleQrScan = (qrId: string) => { alert(`Lógica para QR Code ${qrId} não implementada.`); };
