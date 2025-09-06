@@ -17,12 +17,14 @@ export type Mission = {
     qrId?: string;
 };
 
+// src/types.ts
+
 export type RankingPlayer = {
-    position: ReactNode;
-    id: number;
+    id: number | string;
     name: string;
     xp: number;
     avatar: string;
+    position: number; // <--- CORRIGIDO para number
 };
 
 export type Tab = 'fazenda' | 'cursos' | 'escanear' | 'loja';
