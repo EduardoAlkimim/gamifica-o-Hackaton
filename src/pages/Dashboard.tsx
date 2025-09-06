@@ -222,14 +222,14 @@ type ScannerSectionProps = {
 };
 const ScannerSection = ({ onScan }: ScannerSectionProps) => (
     <section className="scanner-section">
-         <h2 className="section-title"><QrCode color="#c084fc"/>Ponto de Descoberta</h2>
-         <p className="placeholder-text">Aponte sua câmera para um QR Code de Missão de Exploração para desbloquear recompensas especiais!</p>
-         <div className="scanner-viewfinder">
-             <QrCode size={80} color="rgba(243, 244, 246, 0.2)" />
-         </div>
-         <button className="scanner-button" onClick={() => onScan('BIBLIO_01')}>
-           Simular Leitura (Biblioteca)
-         </button>
+       <h2 className="section-title"><QrCode color="#c084fc"/>Ponto de Descoberta</h2>
+       <p className="placeholder-text">Aponte sua câmera para um QR Code de Missão de Exploração para desbloquear recompensas especiais!</p>
+       <div className="scanner-viewfinder">
+           <QrCode size={80} color="rgba(243, 244, 246, 0.2)" />
+       </div>
+       <button className="scanner-button" onClick={() => onScan('BIBLIO_01')}>
+         Simular Leitura (Biblioteca)
+       </button>
     </section>
 );
 
@@ -351,6 +351,59 @@ const Dashboard = () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    // Este useEffect cria um intervalo para atualizar o ranking a cada 15 segundos.
+    useEffect(() => {
+        const fetchRanking = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error("Token não encontrado para atualização do ranking.");
+                return; // Para a execução se não houver token
+            }
+
+            try {
+                const leaderboardUrl = `https://service2.funifier.com/v3/leaderboard/E6cIhso/leaders`;
+                const requestOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                };
+
+                const leaderboardResponse = await fetch(leaderboardUrl, requestOptions);
+
+                if (!leaderboardResponse.ok) {
+                    // Loga o erro no console em vez de parar a aplicação
+                    console.error('Falha ao recarregar dados do ranking.');
+                    return;
+                }
+                
+                const leaderboardJson = await leaderboardResponse.json();
+
+                const transformedRanking = leaderboardJson.leaders.map((leader: any) => ({
+                    id: leader.player,
+                    name: leader.name,
+                    xp: leader.total,
+                    avatar: leader.image,
+                    position: leader.position
+                }));
+
+                setRanking(transformedRanking); // Atualiza o estado do ranking
+
+            } catch (err) {
+                console.error("Erro ao atualizar o ranking:", err);
+            }
+        };
+
+        // Define o intervalo para executar a função a cada 15000 milissegundos (15 segundos)
+        const intervalId = setInterval(fetchRanking, 15000);
+
+        // Função de limpeza: será executada quando o componente for "desmontado"
+        // Isso impede que o intervalo continue rodando em segundo plano.
+        return () => clearInterval(intervalId);
+
+    }, []); // O array de dependências vazio [] garante que o intervalo seja configurado apenas uma vez.
 
     const playSound = (type: 'complete' | 'reward' | 'scan') => {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -539,7 +592,7 @@ const Dashboard = () => {
                                     <motion.div key={mission.id} layout className={`mission-card ${mission.completed ? 'mission-card-completed' : ''}`}>
                                         <div className="mission-info">
                                             <div className={`mission-checkbox ${mission.completed ? 'mission-checkbox-completed' : ''}`}>
-                                              {mission.completed && <motion.div initial={{scale:0}} animate={{scale:1}}>✓</motion.div>}
+                                                {mission.completed && <motion.div initial={{scale:0}} animate={{scale:1}}>✓</motion.div>}
                                             </div>
                                             <div>
                                                 <p className={`mission-text ${mission.completed ? 'mission-text-completed' : ''}`}>{mission.text}</p>
